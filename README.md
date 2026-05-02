@@ -1,6 +1,6 @@
 # Qraft: Generador de códigos QR con identidad de marca
 
-![Icon](/public/favicon.svg)
+![Icon](public/favicon.svg)
 
 **Qraft** genera códigos QR que extraen automáticamente los colores y el favicon de cualquier web — sin backend, sin cuenta, sin datos guardados.
 

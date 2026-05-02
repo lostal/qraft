@@ -1,0 +1,20 @@
+---
+import Layout from '../layouts/Layout.astro';
+import '../styles/global.css';
+---
+
+<Layout title="Página no encontrada — Qraft" description="Esta página no existe.">
+  <div class="min-h-screen flex items-center justify-center px-6">
+    <div class="text-center space-y-4">
+      <p class="font-mono text-7xl font-medium text-ink-200 select-none">404</p>
+      <h1 class="font-display italic text-3xl font-semibold text-ink-900">Página no encontrada</h1>
+      <p class="font-sans text-ink-500 text-sm">Esta URL no existe.</p>
+      <a
+        href="/"
+        class="inline-flex items-center gap-1.5 text-sm font-mono text-caoba hover:underline"
+      >
+        ← Volver al generador
+      </a>
+    </div>
+  </div>
+</Layout>

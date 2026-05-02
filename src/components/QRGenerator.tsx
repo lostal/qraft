@@ -145,9 +145,9 @@ export default function QRGenerator() {
       img.crossOrigin = 'anonymous';
       img.src = wsrvUrl;
       await new Promise<void>((res, rej) => {
-        img.onload = () => res();
-        img.onerror = () => rej(new Error('image load failed'));
-        setTimeout(rej, 8000);
+        const timer = setTimeout(() => rej(new Error('timeout')), 8000);
+        img.onload = () => { clearTimeout(timer); res(); };
+        img.onerror = () => { clearTimeout(timer); rej(new Error('image load failed')); };
       });
 
       const { default: ColorThiefCtor } = await import('colorthief');
@@ -202,8 +202,13 @@ export default function QRGenerator() {
     try {
       await renderQR(maybeNormalizeUrl(content), qrImageUrl, dots, bg, qrMode);
       setStatus('done');
-    } catch {
-      setErrorMsg('No se pudo generar el código QR. Inténtalo de nuevo.');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      setErrorMsg(
+        msg.toLowerCase().includes('overflow') || msg.toLowerCase().includes('length')
+          ? 'El contenido del QR es demasiado largo. Acorta el texto e inténtalo de nuevo.'
+          : 'No se pudo generar el código QR. Inténtalo de nuevo.'
+      );
       setStatus('error');
     }
   }, [sourceUrl, qrContent, renderQR, qrMode]);
@@ -218,6 +223,7 @@ export default function QRGenerator() {
     return () => {
       if (colorUpdateTimer.current) clearTimeout(colorUpdateTimer.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- qrContent y faviconBlobRef excluidos deliberadamente; efecto solo para cambios visuales
   }, [dotColor, bgColor, qrMode]);
 
   /* download */
@@ -287,6 +293,7 @@ export default function QRGenerator() {
   };
 
   /* ─── render ─────────────────────────────────────────── */
+  const showPalette = status === 'done' && !!palette;
   return (
     <div className="min-h-screen flex flex-col">
 
@@ -301,7 +308,7 @@ export default function QRGenerator() {
       </header>
 
       {/* ── wrapper vertical centering ── */}
-      <div className="flex-1 flex flex-col justify-center gap-10 py-10">
+      <main className="flex-1 flex flex-col justify-center gap-10 py-10">
 
       {/* ── hero ── */}
       <section
@@ -372,7 +379,7 @@ export default function QRGenerator() {
               {/* Mode selector */}
               <div>
                 <p className="label mb-2">Estilo</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Estilo del QR">
                   {([
                     { value: 'center', icon: <QrCode className="w-4 h-4" />, label: 'Favicon en el centro' },
                     { value: 'artistic', icon: <Layers className="w-4 h-4" />, label: 'Favicon como puntos' },
@@ -380,6 +387,7 @@ export default function QRGenerator() {
                     <button
                       key={opt.value}
                       type="button"
+                      aria-pressed={qrMode === opt.value}
                       onClick={() => setQrMode(opt.value)}
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-mono transition-all duration-150
                         ${qrMode === opt.value
@@ -422,10 +430,13 @@ export default function QRGenerator() {
             {/* ── palette & controls — height animated via max-height transition ── */}
             <div
               style={{
-                maxHeight: status === 'done' && palette ? '900px' : '0',
-                opacity: status === 'done' && palette ? 1 : 0,
+                maxHeight: showPalette ? '900px' : '0',
+                opacity: showPalette ? 1 : 0,
                 overflow: 'hidden',
-                transition: 'max-height 0.55s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease',
+                visibility: showPalette ? 'visible' : 'hidden',
+                transition: showPalette
+                  ? 'max-height 0.55s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease, visibility 0s'
+                  : 'max-height 0.55s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease, visibility 0s 0.55s',
               }}
             >
               <div className="space-y-5">
@@ -438,6 +449,8 @@ export default function QRGenerator() {
                       <button
                         key={i}
                         title={color}
+                        aria-label={`Usar ${color} como color de puntos`}
+                        aria-pressed={dotColor === color}
                         onClick={() => setDotColor(color)}
                         className={`color-swatch ${dotColor === color ? 'swatch-selected' : ''}`}
                         style={{ backgroundColor: color }}
@@ -578,14 +591,14 @@ export default function QRGenerator() {
         )}
       </div>
 
-      </div>{/* end vertical centering wrapper */}
+      </main>{/* end vertical centering wrapper */}
 
       {/* ── footer ── */}
       <footer className="border-t border-ink-200 px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="font-display italic font-semibold text-ink-900 tracking-tight">qraft</span>
           <span className="text-ink-300">·</span>
-          <span className="text-[11px] font-mono text-ink-400">100% en cliente · sin almacenamiento de datos</span>
+          <span className="text-[11px] font-mono text-ink-400">100% en cliente · sin almacenamiento · favicon vía Google y wsrv.nl</span>
         </div>
         <a
           href="https://lostal.dev"
