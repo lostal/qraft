@@ -112,17 +112,6 @@
     background-clip: text;
   }
 
-  /* Palette section entrance — expands from top and bottom */
-  .expand-in {
-    animation: expandIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-    overflow: hidden;
-  }
-
-  @keyframes expandIn {
-    from { max-height: 0; opacity: 0; }
-    to   { max-height: 1200px; opacity: 1; }
-  }
-
   .hero-section {
     transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
   }

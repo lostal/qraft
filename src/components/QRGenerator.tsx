@@ -29,6 +29,14 @@ function normalizeUrl(url: string): string {
   return url.startsWith('http') ? url : 'https://' + url;
 }
 
+function maybeNormalizeUrl(content: string): string {
+  if (!content) return '';
+  if (content.startsWith('http://') || content.startsWith('https://')) return content;
+  // Only prepend https:// if it looks like a bare domain (no spaces, has a dot)
+  if (!content.includes(' ') && content.includes('.')) return 'https://' + content;
+  return content;
+}
+
 /* ─── types ───────────────────────────────────────────── */
 
 type Status = 'idle' | 'loading' | 'done' | 'error';
@@ -124,8 +132,8 @@ export default function QRGenerator() {
     setErrorMsg('');
 
     const domain = extractDomain(src);
-    const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-    const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(googleFaviconUrl)}&output=png&w=64&h=64`;
+    const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
+    const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(googleFaviconUrl)}&output=png&w=256&h=256`;
 
     let dots = '#1c1712';
     let bg = '#ffffff';
@@ -191,8 +199,13 @@ export default function QRGenerator() {
     setBgColor(bg);
     setPalette({ dominant: dots, background: bg, all: allColors });
 
-    await renderQR(normalizeUrl(content), qrImageUrl, dots, bg, qrMode);
-    setStatus('done');
+    try {
+      await renderQR(maybeNormalizeUrl(content), qrImageUrl, dots, bg, qrMode);
+      setStatus('done');
+    } catch {
+      setErrorMsg('No se pudo generar el código QR. Inténtalo de nuevo.');
+      setStatus('error');
+    }
   }, [sourceUrl, qrContent, renderQR, qrMode]);
 
   /* re-render when colors or mode change */
@@ -200,7 +213,7 @@ export default function QRGenerator() {
     if (status !== 'done') return;
     if (colorUpdateTimer.current) clearTimeout(colorUpdateTimer.current);
     colorUpdateTimer.current = setTimeout(() => {
-      renderQR(normalizeUrl(qrContent), faviconBlobRef.current, dotColor, bgColor, qrMode);
+      renderQR(maybeNormalizeUrl(qrContent), faviconBlobRef.current, dotColor, bgColor, qrMode);
     }, qrMode === 'artistic' ? 0 : 300);
     return () => {
       if (colorUpdateTimer.current) clearTimeout(colorUpdateTimer.current);
@@ -216,24 +229,28 @@ export default function QRGenerator() {
         if (fmt === 'png' && artCanvasRef.current) {
           artCanvasRef.current.toBlob(blob => {
             if (!blob) return;
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
+            a.href = url;
             a.download = 'qraft-qr.png';
             a.click();
+            URL.revokeObjectURL(url);
           }, 'image/png');
         } else if (fmt === 'svg') {
           const svg = await generateArtisticQRSVG({
-            text: normalizeUrl(qrContent),
+            text: maybeNormalizeUrl(qrContent),
             faviconUrl: faviconBlobRef.current,
             dotColor,
             bgColor,
             canvasSize: 1000,
           });
           const blob = new Blob([svg], { type: 'image/svg+xml' });
+          const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
+          a.href = url;
           a.download = 'qraft-qr.svg';
           a.click();
+          URL.revokeObjectURL(url);
         }
         return;
       }
@@ -244,7 +261,7 @@ export default function QRGenerator() {
       }
       const { default: QRCodeStyling } = await import('qr-code-styling');
       const svgQr = new QRCodeStyling({
-        ...buildQROptions(normalizeUrl(qrContent), faviconBlobRef.current, dotColor, bgColor),
+        ...buildQROptions(maybeNormalizeUrl(qrContent), faviconBlobRef.current, dotColor, bgColor),
         type: 'svg' as const,
       });
       await svgQr.download({ name: 'qraft-qr', extension: 'svg' });
