@@ -77,7 +77,7 @@ export default function QRGenerator() {
   const [errorMsg, setErrorMsg] = useState('');
   const [favicon, setFavicon] = useState<string | null>(null);
   const [palette, setPalette] = useState<Palette | null>(null);
-  const [dotColor, setDotColor] = useState('#1a1a2e');
+  const [dotColor, setDotColor] = useState('#1c1712');
   const [bgColor, setBgColor] = useState('#ffffff');
   const [qrMode, setQrMode] = useState<QRMode>('center');
 
@@ -132,8 +132,8 @@ export default function QRGenerator() {
     // It converts to PNG and resizes, making it safe for canvas color extraction.
     const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(googleFaviconUrl)}&output=png&w=64&h=64`;
 
-    let dots = '#111827';
-    let bg = '#f8f8f8';
+    let dots = '#1c1712';
+    let bg = '#ffffff';
     let allColors: string[] = [dots, bg];
     let qrImageUrl: string | null = null;
 
@@ -156,12 +156,13 @@ export default function QRGenerator() {
       const extracted = raw.map(rgbToHex);
 
       /* background: only use palette color if genuinely light */
-      let lightestLum = -1, lightestColor = '#f8f8f8';
+      let lightestLum = -1, lightestColor = '#ffffff';
       for (const hex of extracted) {
         const lum = getLuminance(hex);
         if (lum > lightestLum) { lightestLum = lum; lightestColor = hex; }
       }
-      bg = lightestLum > 0.7 ? lightestColor : '#f8f8f8';
+      bg = lightestLum > 0.7 ? lightestColor : '#ffffff';
+
       const bgLum = getLuminance(bg);
 
       /* build usable palette: sort by contrast, filter low-contrast, dedupe, max 4 */
@@ -186,7 +187,7 @@ export default function QRGenerator() {
 
       /* safety: if even the best color barely contrasts, flip bg */
       if (Math.abs(getLuminance(dots) - bgLum) < 0.15) {
-        bg = getLuminance(dots) < 0.5 ? '#f8f8f8' : '#111827';
+        bg = getLuminance(dots) < 0.5 ? '#ffffff' : '#1c1712';
       }
 
       // wsrv.nl CORS allows canvas embedding without tainting → downloads work
@@ -267,7 +268,7 @@ export default function QRGenerator() {
     setStatus('idle');
     setFavicon(null);
     setPalette(null);
-    setDotColor('#1a1a2e');
+    setDotColor('#1c1712');
     setBgColor('#ffffff');
     setErrorMsg('');
     faviconBlobRef.current = null;
@@ -284,25 +285,25 @@ export default function QRGenerator() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* ── nav ── */}
-      <header className="px-6 py-5 flex items-center justify-between border-b border-ink-800">
+      <header className="sticky top-0 z-10 px-6 py-4 flex items-center justify-between border-b border-ink-200 bg-ink-50/90 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber flex items-center justify-center">
-            <QrCode className="w-4 h-4 text-ink-950" />
+          <div className="w-8 h-8 rounded-lg bg-caoba flex items-center justify-center">
+            <QrCode className="w-4 h-4 text-white" />
           </div>
-          <span className="font-display text-xl font-semibold text-ink-50 italic">qraft</span>
+          <span className="font-display text-xl font-semibold text-ink-900 italic">qraft</span>
         </div>
-        <span className="hidden sm:block text-xs font-mono text-ink-500 tracking-wide">
+        <span className="hidden sm:block text-xs font-mono text-ink-400 tracking-wide">
           brand-aware QR generator
         </span>
       </header>
 
       {/* ── hero ── */}
       <section className="px-6 pt-16 pb-12 text-center">
-        <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-light italic leading-none tracking-tight text-ink-50 mb-4">
+        <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-light italic leading-none tracking-tight text-ink-900 mb-4">
           QR codes that{' '}
-          <span className="text-gradient-amber not-italic font-semibold">wear your brand</span>
+          <span className="text-gradient-caoba not-italic font-semibold">wear your brand</span>
         </h1>
-        <p className="text-ink-400 font-sans text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+        <p className="text-ink-600 font-sans text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
           Drop any URL — we extract its colors and favicon to craft a QR code
           that feels native to the brand. No backend. No account.
         </p>
@@ -312,15 +313,15 @@ export default function QRGenerator() {
       <main className="flex-1 px-4 sm:px-6 pb-16 max-w-6xl mx-auto w-full">
         <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start">
           {/* ── left panel ── */}
-          <div className="bg-ink-800 border border-ink-700 rounded-2xl p-6 space-y-6">
+          <div className="bg-white border border-ink-200 rounded-2xl p-6 space-y-6 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* source url */}
               <div>
                 <label className="label" htmlFor="source-url">
-                  Website URL <span className="text-ink-600 normal-case tracking-normal">(for colors &amp; favicon)</span>
+                  Website URL <span className="text-ink-400 normal-case tracking-normal">(for colors &amp; favicon)</span>
                 </label>
                 <div className="relative">
-                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-500 pointer-events-none" />
+                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
                   <input
                     id="source-url"
                     type="text"
@@ -337,10 +338,10 @@ export default function QRGenerator() {
               {/* qr content */}
               <div>
                 <label className="label" htmlFor="qr-content">
-                  QR Content <span className="text-ink-600 normal-case tracking-normal">(URL or text)</span>
+                  QR Content <span className="text-ink-400 normal-case tracking-normal">(URL or text)</span>
                 </label>
                 <div className="relative">
-                  <ChevronRight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-500 pointer-events-none" />
+                  <ChevronRight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
                   <input
                     id="qr-content"
                     type="text"
@@ -368,8 +369,8 @@ export default function QRGenerator() {
                       onClick={() => setQrMode(opt.value)}
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-mono transition-all duration-150
                         ${qrMode === opt.value
-                          ? 'bg-amber/10 border-amber text-amber'
-                          : 'bg-ink-800 border-ink-700 text-ink-400 hover:border-ink-500 hover:text-ink-200'
+                          ? 'bg-caoba/10 border-caoba text-caoba'
+                          : 'bg-ink-50 border-ink-200 text-ink-500 hover:border-ink-300 hover:text-ink-800'
                         }`}
                     >
                       {opt.icon}
@@ -400,7 +401,7 @@ export default function QRGenerator() {
 
             {/* error */}
             {status === 'error' && (
-              <div className="bg-red-950/50 border border-red-900/60 rounded-xl p-4 text-sm text-red-300 font-mono animate-fade-up">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 font-mono animate-fade-up">
                 {errorMsg}
               </div>
             )}
@@ -424,7 +425,7 @@ export default function QRGenerator() {
                       />
                     ))}
                   </div>
-                  <p className="mt-2 text-[10px] font-mono text-ink-600">
+                  <p className="mt-2 text-[10px] font-mono text-ink-400">
                     Click a swatch to use as dot color
                   </p>
                 </div>
@@ -441,7 +442,7 @@ export default function QRGenerator() {
                         onChange={e => setDotColor(e.target.value)}
                         className="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-0 p-0.5"
                       />
-                      <span className="font-mono text-xs text-ink-400">{dotColor}</span>
+                      <span className="font-mono text-xs text-ink-500">{dotColor}</span>
                     </div>
                   </div>
                   <div>
@@ -454,7 +455,7 @@ export default function QRGenerator() {
                         onChange={e => setBgColor(e.target.value)}
                         className="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-0 p-0.5"
                       />
-                      <span className="font-mono text-xs text-ink-400">{bgColor}</span>
+                      <span className="font-mono text-xs text-ink-500">{bgColor}</span>
                     </div>
                   </div>
                 </div>
@@ -483,7 +484,7 @@ export default function QRGenerator() {
 
                   <button
                     onClick={reset}
-                    className="w-full flex items-center justify-center gap-2 text-ink-500 hover:text-ink-300 text-sm font-mono transition-colors py-1"
+                    className="w-full flex items-center justify-center gap-2 text-ink-400 hover:text-ink-700 text-sm font-mono transition-colors py-1"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     Start over
@@ -507,31 +508,31 @@ export default function QRGenerator() {
                 className="qr-glow"
                 style={{
                   background: `radial-gradient(ellipse, ${dotColor} 0%, ${bgColor} 55%, transparent 80%)`,
-                  opacity: 0.2,
+                  opacity: 0.08,
                 }}
               />
               {/* favicon badge */}
               {favicon && (
-                <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-ink-800 border-2 border-ink-700 flex items-center justify-center overflow-hidden z-20 shadow-lg">
+                <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-white border-2 border-ink-200 flex items-center justify-center overflow-hidden z-20 shadow-md">
                   <img src={favicon} alt="favicon" className="w-6 h-6 object-contain" />
                 </div>
               )}
               {/* QR canvas — ref is valid even when parent is display:none */}
               <div
                 ref={qrContainerRef}
-                className="relative z-10 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-ink-700"
+                className="relative z-10 rounded-2xl overflow-hidden shadow-lg ring-1 ring-ink-200"
               />
             </div>
 
             {/* placeholder — only visible when QR isn't ready */}
             {status !== 'done' && (
               <div className="flex flex-col items-center gap-4 text-center">
-                <div className="relative w-[380px] h-[380px] rounded-2xl border border-dashed border-ink-700 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-2xl overflow-hidden opacity-20">
+                <div className="relative w-[380px] h-[380px] rounded-2xl border border-dashed border-ink-300 flex items-center justify-center bg-white/50">
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden opacity-30">
                     <svg width="100%" height="100%">
                       <defs>
                         <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                          <circle cx="10" cy="10" r="1.5" fill="#5C554B" />
+                          <circle cx="10" cy="10" r="1.5" fill="#C8C0B8" />
                         </pattern>
                       </defs>
                       <rect width="100%" height="100%" fill="url(#dots)" />
@@ -540,22 +541,22 @@ export default function QRGenerator() {
                   <div className="flex flex-col items-center gap-3 z-10">
                     {status === 'loading' ? (
                       <>
-                        <div className="w-16 h-16 rounded-2xl bg-ink-800 border border-ink-700 flex items-center justify-center">
-                          <Loader2 className="w-7 h-7 text-amber animate-spin" />
+                        <div className="w-16 h-16 rounded-2xl bg-ink-100 border border-ink-200 flex items-center justify-center">
+                          <Loader2 className="w-7 h-7 text-caoba animate-spin" />
                         </div>
                         <div className="space-y-1 text-center">
-                          <p className="text-ink-300 font-sans text-sm font-medium">Fetching favicon…</p>
-                          <p className="text-ink-600 font-mono text-xs">extracting color palette</p>
+                          <p className="text-ink-700 font-sans text-sm font-medium">Fetching favicon…</p>
+                          <p className="text-ink-400 font-mono text-xs">extracting color palette</p>
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="w-16 h-16 rounded-2xl bg-ink-800 border border-ink-700 flex items-center justify-center">
-                          <QrCode className="w-7 h-7 text-ink-600" />
+                        <div className="w-16 h-16 rounded-2xl bg-ink-100 border border-ink-200 flex items-center justify-center">
+                          <QrCode className="w-7 h-7 text-ink-400" />
                         </div>
                         <div className="space-y-1 text-center">
-                          <p className="text-ink-500 font-sans text-sm">Your QR will appear here</p>
-                          <p className="text-ink-700 font-mono text-xs">enter a URL and generate</p>
+                          <p className="text-ink-600 font-sans text-sm">Your QR will appear here</p>
+                          <p className="text-ink-400 font-mono text-xs">enter a URL and generate</p>
                         </div>
                       </>
                     )}
@@ -564,8 +565,8 @@ export default function QRGenerator() {
                 {status === 'idle' && (
                   <div className="flex items-center gap-6 mt-2">
                     {[['01', 'Enter URL'], ['02', 'Extract colors'], ['03', 'Download QR']].map(([n, label]) => (
-                      <div key={n} className="flex items-center gap-2 text-ink-600">
-                        <span className="font-mono text-[10px] text-amber">{n}</span>
+                      <div key={n} className="flex items-center gap-2 text-ink-500">
+                        <span className="font-mono text-[10px] text-caoba">{n}</span>
                         <span className="font-sans text-xs">{label}</span>
                       </div>
                     ))}
@@ -578,7 +579,7 @@ export default function QRGenerator() {
       </main>
 
       {/* ── footer ── */}
-      <footer className="border-t border-ink-800 px-6 py-4 flex items-center justify-between text-ink-600 text-xs font-mono">
+      <footer className="border-t border-ink-200 px-6 py-4 flex items-center justify-between text-ink-400 text-xs font-mono">
         <span>qraft</span>
         <span>100% client-side · no data stored</span>
       </footer>

@@ -16,60 +16,60 @@
   }
 
   body {
-    background-color: #0F0D0B;
-    color: #E8E0D8;
+    background-color: #F5F0EA;
+    color: #1C1712;
   }
 
   ::selection {
-    background-color: rgba(232, 150, 42, 0.3);
-    color: #F5F0EA;
+    background-color: rgba(156, 110, 46, 0.18);
+    color: #1C1712;
   }
 }
 
 @layer components {
   .input-field {
-    @apply w-full bg-ink-800 border border-ink-700 rounded-xl px-4 py-3
-           text-ink-100 placeholder-ink-500 font-mono text-sm
-           focus:outline-none focus:ring-2 focus:ring-amber focus:border-transparent
+    @apply w-full bg-white border border-ink-200 rounded-xl px-4 py-3
+           text-ink-900 placeholder-ink-400 font-mono text-sm
+           focus:outline-none focus:ring-2 focus:ring-caoba focus:border-transparent
            transition-all duration-200;
   }
 
   .btn-primary {
-    @apply w-full flex items-center justify-center gap-2 bg-amber text-ink-950
+    @apply w-full flex items-center justify-center gap-2 bg-caoba text-white
            font-sans font-semibold text-sm px-6 py-3.5 rounded-xl
-           hover:bg-amber-light active:bg-amber-dark
+           hover:bg-caoba-dark active:bg-caoba-dark
            transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply flex items-center justify-center gap-2 bg-ink-800 border border-ink-700
-           text-ink-200 font-sans font-medium text-sm px-5 py-3 rounded-xl
-           hover:bg-ink-700 hover:border-ink-600 hover:text-ink-100
+    @apply flex items-center justify-center gap-2 bg-white border border-ink-200
+           text-ink-700 font-sans font-medium text-sm px-5 py-3 rounded-xl
+           hover:bg-ink-100 hover:border-ink-300 hover:text-ink-900
            active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
   .label {
-    @apply block text-xs font-mono font-medium text-ink-400 uppercase tracking-widest mb-2;
+    @apply block text-xs font-mono font-medium text-ink-500 uppercase tracking-widest mb-2;
   }
 
   .section-divider {
-    @apply border-t border-ink-800 my-6;
+    @apply border-t border-ink-200 my-6;
   }
 
   .color-swatch {
     @apply relative w-10 h-10 rounded-lg cursor-pointer
-           ring-2 ring-transparent hover:ring-ink-300
+           ring-2 ring-transparent hover:ring-ink-400
            transition-all duration-150 active:scale-90;
   }
 
   .swatch-selected {
-    @apply ring-2 ring-amber scale-110;
+    @apply ring-2 ring-caoba scale-110;
   }
 }
 
 @layer utilities {
-  .text-gradient-amber {
-    background: linear-gradient(135deg, #E8962A 0%, #F5C06A 50%, #E8962A 100%);
+  .text-gradient-caoba {
+    background: linear-gradient(135deg, #7a5218 0%, #c4a05c 50%, #9c6e2e 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -84,7 +84,7 @@
     inset: -40px;
     border-radius: 50%;
     filter: blur(60px);
-    opacity: 0.15;
+    opacity: 0.08;
     pointer-events: none;
     transition: background 1s ease, opacity 0.5s ease;
   }
@@ -95,12 +95,12 @@
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0F0D0B;
+  background: #F5F0EA;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2C2822;
+  background: #C8C0B8;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3D3830;
+  background: #A09890;
 }

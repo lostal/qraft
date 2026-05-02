@@ -22,10 +22,10 @@ export default {
           100: '#E8E0D8',
           50:  '#F5F0EA',
         },
-        amber: {
-          DEFAULT: '#E8962A',
-          light: '#F5C06A',
-          dark: '#B5700A',
+        caoba: {
+          DEFAULT: '#9c6e2e',
+          light: '#c4a05c',
+          dark: '#7a5218',
         },
       },
       animation: {

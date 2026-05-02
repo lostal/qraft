@@ -5,7 +5,8 @@
       "Bash(npm info *)",
       "Bash(npm search *)",
       "Bash(node -e ' *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Read(//c/Users/alvar/Proyectos/archivado/**)"
     ]
   }
 }
