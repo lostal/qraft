@@ -2,43 +2,38 @@
 
 ![Icon](/public/favicon.svg)
 
-**Qraft** es un generador de códigos QR que extrae automáticamente los colores y el favicon de cualquier web para producir códigos visualmente alineados con la marca — sin backend, sin cuenta, sin almacenamiento de datos.
+**Qraft** genera códigos QR que extraen automáticamente los colores y el favicon de cualquier web — sin backend, sin cuenta, sin datos guardados.
 
-## El problema
+## Por qué existe
 
-Los códigos QR genéricos son intercambiables visualmente. Qraft resuelve esto extrayendo la identidad visual de cualquier URL y aplicándola directamente al resultado: el color dominante se convierte en el color de los puntos, el favicon se incrusta en el código y el fondo se adapta al tono más claro de la paleta extraída.
+Un código QR genérico no dice nada de quien lo pone. Qraft coge la identidad visual de una URL y la aplica al código: el color principal pasa a ser el color de los puntos, el favicon se incrusta y el fondo se adapta al tono más claro de la paleta.
 
-## Dos modos de generación
+## Dos modos
 
-**Favicon en el centro** utiliza `qr-code-styling` para renderizar un QR estándar con el favicon centrado dentro de la zona de silencio, aprovechando la corrección de errores de nivel H para mantener la legibilidad con un 30% de la imagen cubriendo el código.
+**Favicon en el centro** — usa `qr-code-styling` con corrección de errores nivel H, que aguanta hasta un 30% de la superficie tapada sin perder legibilidad. El favicon va centrado en esa zona.
 
-**Favicon como puntos** reemplaza los módulos de datos centrales con un bitmap binarizado del favicon mediante un pipeline de renderizado propio. El bitmap se umbraliza con el método de Otsu a 64×64 píxeles y se mapea módulo a módulo, preservando siempre los patrones de búsqueda y los marcadores de alineación — los elementos estructurales de los que depende cualquier decodificador QR.
+**Favicon como puntos** — los módulos centrales del QR se sustituyen por el favicon binarizado con el método de Otsu a 64×64. El mapeo es módulo a módulo, respetando siempre los patrones de esquina y los marcadores de alineación, que son intocables para cualquier lector QR.
 
-## Extracción de color
+## Cómo se extraen los colores
 
-ColorThief muestrea 8 colores del favicon (obtenido a 256×256 a través de la API de favicons de Google, con proxy en wsrv.nl para CORS). La paleta se filtra por ratio de contraste respecto al fondo, se deduplica por proximidad de luminancia y se limita a 4 opciones utilizables. El color de mayor contraste se selecciona automáticamente.
+El favicon se pide a 256×256 a través de la API de Google, con wsrv.nl como proxy para evitar problemas de CORS. ColorThief saca 8 colores, se filtran los que tienen poco contraste con el fondo, se eliminan duplicados por luminancia y se dejan un máximo de 4 opciones. El de mayor contraste se selecciona solo.
 
-## Stack técnico
+## Stack
 
-- **Framework**: Astro 4 con isla React para el generador interactivo
-- **Estilos**: Tailwind CSS v3, tokens de diseño propios, JetBrains Mono + Fraunces
-- **Renderizado QR**: `qrcode-generator` (matriz base), `qr-code-styling` (modo central)
-- **Extracción de color**: ColorThief + lógica propia de contraste y deduplicación
-- **Proxy de imagen**: wsrv.nl (CORS + normalización de formato)
-- **Exportación**: PNG vía Canvas API, SVG mediante serialización programática
+- **Framework**: Astro 4 con isla React para la parte interactiva
+- **Estilos**: Tailwind CSS v3, JetBrains Mono + Fraunces
+- **QR**: `qrcode-generator` (matriz) + `qr-code-styling` (modo central)
+- **Colores**: ColorThief con filtrado y deduplicación propios
+- **Exportación**: PNG desde Canvas API, SVG generado a 1000×1000 por separado
 
-## Exportación
-
-Ambos modos exportan a PNG y SVG. El SVG artístico se genera a 1000×1000 de forma independiente al canvas de previsualización, garantizando calidad de impresión. Las object URLs se revocan inmediatamente tras la descarga para evitar acumulación de memoria.
-
-## Ejecución local
+## Correr en local
 
 ```bash
 npm install
 npm run dev
 ```
 
-Compila a salida estática con `npm run build`. No requiere variables de entorno.
+`npm run build` genera la salida estática. No hace falta ninguna variable de entorno.
 
 ---
 
