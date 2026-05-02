@@ -86,15 +86,16 @@ function drawFinderPattern(
   dotColor: string, bgColor: string,
 ) {
   ctx.fillStyle = dotColor;
-  roundedRectPath(ctx, x, y, 7 * m, 7 * m, m * 0.5);
+  roundedRectPath(ctx, x, y, 7 * m, 7 * m, m * 2.5);
   ctx.fill();
 
   ctx.fillStyle = bgColor;
-  roundedRectPath(ctx, x + m, y + m, 5 * m, 5 * m, m * 0.5);
+  roundedRectPath(ctx, x + m, y + m, 5 * m, 5 * m, m * 1.5);
   ctx.fill();
 
   ctx.fillStyle = dotColor;
-  roundedRectPath(ctx, x + 2 * m, y + 2 * m, 3 * m, 3 * m, m * 0.5);
+  ctx.beginPath();
+  ctx.arc(x + 3.5 * m, y + 3.5 * m, 1.5 * m, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -151,7 +152,7 @@ export async function generateArtisticQR(opts: ArtisticQROptions): Promise<HTMLC
 
   const margin = Math.round(canvasSize * 0.025);
   const m = (canvasSize - 2 * margin) / N;
-  const dotRadius = m * 0.44;
+  const dotRadius = m * 0.5;
 
   const canvas = document.createElement('canvas');
   canvas.width = canvasSize;
@@ -202,7 +203,7 @@ export async function generateArtisticQRSVG(opts: ArtisticQROptions): Promise<st
 
   const margin = Math.round(canvasSize * 0.025);
   const m = (canvasSize - 2 * margin) / N;
-  const dotR = (m * 0.44).toFixed(2);
+  const dotR = (m * 0.5).toFixed(2);
 
   const dots: string[] = [];
   for (let row = 0; row < N; row++) {
@@ -216,7 +217,6 @@ export async function generateArtisticQRSVG(opts: ArtisticQROptions): Promise<st
   }
 
   const fp2 = (n: number) => n.toFixed(2);
-  const r5 = fp2(m * 0.5);
   const finderSVG = [
     { row: 0, col: 0 },
     { row: 0, col: N - 7 },
@@ -225,9 +225,9 @@ export async function generateArtisticQRSVG(opts: ArtisticQROptions): Promise<st
     const x = margin + col * m;
     const y = margin + row * m;
     return [
-      `<rect x="${fp2(x)}" y="${fp2(y)}" width="${fp2(7*m)}" height="${fp2(7*m)}" rx="${r5}" fill="${dotColor}"/>`,
-      `<rect x="${fp2(x+m)}" y="${fp2(y+m)}" width="${fp2(5*m)}" height="${fp2(5*m)}" rx="${r5}" fill="${bgColor}"/>`,
-      `<rect x="${fp2(x+2*m)}" y="${fp2(y+2*m)}" width="${fp2(3*m)}" height="${fp2(3*m)}" rx="${r5}" fill="${dotColor}"/>`,
+      `<rect x="${fp2(x)}" y="${fp2(y)}" width="${fp2(7*m)}" height="${fp2(7*m)}" rx="${fp2(m*2.5)}" fill="${dotColor}"/>`,
+      `<rect x="${fp2(x+m)}" y="${fp2(y+m)}" width="${fp2(5*m)}" height="${fp2(5*m)}" rx="${fp2(m*1.5)}" fill="${bgColor}"/>`,
+      `<circle cx="${fp2(x+3.5*m)}" cy="${fp2(y+3.5*m)}" r="${fp2(1.5*m)}" fill="${dotColor}"/>`,
     ].join('');
   }).join('');
 
