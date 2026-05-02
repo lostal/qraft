@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Download, Sparkles, Loader2, Link2, QrCode, RotateCcw, ChevronRight } from 'lucide-react';
+import { Download, Sparkles, Loader2, Link2, QrCode, RotateCcw, ChevronRight, Layers } from 'lucide-react';
+import { generateArtisticQR, generateArtisticQRSVG } from '../lib/generateArtisticQR';
 
 /* ─── helpers ─────────────────────────────────────────── */
 
@@ -31,6 +32,7 @@ function normalizeUrl(url: string): string {
 /* ─── types ───────────────────────────────────────────── */
 
 type Status = 'idle' | 'loading' | 'done' | 'error';
+type QRMode = 'center' | 'artistic';
 
 interface Palette {
   all: string[];
@@ -53,9 +55,9 @@ function buildQROptions(
     type: 'canvas' as const,
     data,
     ...(imageUrl ? { image: imageUrl } : {}),
-    margin: 6,
+    margin: 10,
     qrOptions: { errorCorrectionLevel: 'H' as const },
-    dotsOptions: { color: dotColor, type: 'dots' as const },
+    dotsOptions: { color: dotColor, type: 'dots' as const, roundSize: false } as any,
     backgroundOptions: { color: bgColor, round: 0 },
     ...(imageUrl ? {
       // crossOrigin required so canvas isn't tainted → downloads work
@@ -77,22 +79,40 @@ export default function QRGenerator() {
   const [palette, setPalette] = useState<Palette | null>(null);
   const [dotColor, setDotColor] = useState('#1a1a2e');
   const [bgColor, setBgColor] = useState('#ffffff');
+  const [qrMode, setQrMode] = useState<QRMode>('center');
 
   const qrContainerRef = useRef<HTMLDivElement>(null);
   const qrInstanceRef = useRef<any>(null);
   const colorUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // blob URL for the favicon (CORS-safe) — null when favicon fetch failed
+  // CORS-safe image URL for the QR center / artistic logo zone
   const faviconBlobRef = useRef<string | null>(null);
+  // Artistic mode: stores the generated canvas for download
+  const artCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   /* render / re-render QR */
   const renderQR = useCallback(
-    async (data: string, imgUrl: string | null, dots: string, bg: string) => {
+    async (data: string, imgUrl: string | null, dots: string, bg: string, mode: QRMode) => {
       if (!qrContainerRef.current) return;
-      const { default: QRCodeStyling } = await import('qr-code-styling');
-      const qr = new QRCodeStyling(buildQROptions(data, imgUrl, dots, bg));
       qrContainerRef.current.innerHTML = '';
-      qr.append(qrContainerRef.current);
-      qrInstanceRef.current = qr;
+      qrInstanceRef.current = null;
+      artCanvasRef.current = null;
+
+      if (mode === 'artistic') {
+        const canvas = await generateArtisticQR({
+          text: data,
+          faviconUrl: imgUrl,
+          dotColor: dots,
+          bgColor: bg,
+          canvasSize: 380,
+        });
+        artCanvasRef.current = canvas;
+        qrContainerRef.current.appendChild(canvas);
+      } else {
+        const { default: QRCodeStyling } = await import('qr-code-styling');
+        const qr = new QRCodeStyling(buildQROptions(data, imgUrl, dots, bg));
+        qr.append(qrContainerRef.current);
+        qrInstanceRef.current = qr;
+      }
     },
     []
   );
@@ -162,26 +182,54 @@ export default function QRGenerator() {
     setBgColor(bg);
     setPalette({ dominant: dots, background: bg, all: allColors.slice(0, 6) });
 
-    await renderQR(normalizeUrl(content), qrImageUrl, dots, bg);
+    await renderQR(normalizeUrl(content), qrImageUrl, dots, bg, qrMode);
     setStatus('done');
-  }, [sourceUrl, qrContent, renderQR]);
+  }, [sourceUrl, qrContent, renderQR, qrMode]);
 
-  /* debounce color changes → re-render QR */
+  /* re-render when colors or mode change (only after initial generation) */
   useEffect(() => {
     if (status !== 'done') return;
     if (colorUpdateTimer.current) clearTimeout(colorUpdateTimer.current);
     colorUpdateTimer.current = setTimeout(() => {
-      renderQR(normalizeUrl(qrContent), faviconBlobRef.current, dotColor, bgColor);
-    }, 300);
+      renderQR(normalizeUrl(qrContent), faviconBlobRef.current, dotColor, bgColor, qrMode);
+    }, qrMode === 'artistic' ? 0 : 300); // artistic re-render immediately on mode switch
     return () => {
       if (colorUpdateTimer.current) clearTimeout(colorUpdateTimer.current);
     };
-  }, [dotColor, bgColor]);
+  }, [dotColor, bgColor, qrMode]);
 
   /* download */
   const download = useCallback(
     async (fmt: 'png' | 'svg') => {
       if (!qrContent) return;
+
+      if (qrMode === 'artistic') {
+        if (fmt === 'png' && artCanvasRef.current) {
+          artCanvasRef.current.toBlob(blob => {
+            if (!blob) return;
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'qraft-qr.png';
+            a.click();
+          }, 'image/png');
+        } else if (fmt === 'svg') {
+          const svg = await generateArtisticQRSVG({
+            text: normalizeUrl(qrContent),
+            faviconUrl: faviconBlobRef.current,
+            dotColor,
+            bgColor,
+            canvasSize: 1000,
+          });
+          const blob = new Blob([svg], { type: 'image/svg+xml' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'qraft-qr.svg';
+          a.click();
+        }
+        return;
+      }
+
+      // Center-mode downloads
       if (fmt === 'png' && qrInstanceRef.current) {
         await qrInstanceRef.current.download({ name: 'qraft-qr', extension: 'png' });
         return;
@@ -193,7 +241,7 @@ export default function QRGenerator() {
       });
       await svgQr.download({ name: 'qraft-qr', extension: 'svg' });
     },
-    [qrContent, dotColor, bgColor]
+    [qrContent, qrMode, dotColor, bgColor]
   );
 
   const reset = () => {
@@ -204,6 +252,7 @@ export default function QRGenerator() {
     setBgColor('#ffffff');
     setErrorMsg('');
     faviconBlobRef.current = null;
+    artCanvasRef.current = null;
     if (qrContainerRef.current) qrContainerRef.current.innerHTML = '';
   };
 
@@ -283,6 +332,31 @@ export default function QRGenerator() {
                     autoComplete="off"
                     spellCheck={false}
                   />
+                </div>
+              </div>
+
+              {/* Mode selector */}
+              <div>
+                <p className="label mb-2">Style</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: 'center', icon: <QrCode className="w-4 h-4" />, label: 'Favicon in center' },
+                    { value: 'artistic', icon: <Layers className="w-4 h-4" />, label: 'Favicon as dots' },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setQrMode(opt.value)}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-mono transition-all duration-150
+                        ${qrMode === opt.value
+                          ? 'bg-amber/10 border-amber text-amber'
+                          : 'bg-ink-800 border-ink-700 text-ink-400 hover:border-ink-500 hover:text-ink-200'
+                        }`}
+                    >
+                      {opt.icon}
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

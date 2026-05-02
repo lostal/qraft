@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(npm info *)",
+      "Bash(npm search *)",
+      "Bash(node -e ' *)",
+      "Bash(node *)"
     ]
   }
 }
