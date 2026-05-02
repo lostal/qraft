@@ -33,6 +33,7 @@ export default {
         'scale-in': 'scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'spin-slow': 'spin 8s linear infinite',
+        'marquee': 'marquee 28s linear infinite',
       },
       keyframes: {
         fadeUp: {
@@ -42,6 +43,10 @@ export default {
         scaleIn: {
           '0%': { opacity: '0', transform: 'scale(0.88)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        marquee: {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
         },
       },
     },

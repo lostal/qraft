@@ -5,13 +5,13 @@ interface Props {
 }
 
 const {
-  title = 'Qraft — QR codes that wear your brand',
-  description = 'Generate personalized QR codes that automatically match any website\'s colors and favicon. Free, no backend required.',
+  title = 'Qraft',
+  description = 'Genera códigos QR personalizados que extraen automáticamente los colores y el favicon de cualquier web. Gratis, sin servidor.',
 } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,7 +20,7 @@ const {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
   </head>
-  <body class="min-h-screen noise-bg">
+  <body class="min-h-screen">
     <slot />
   </body>
 </html>

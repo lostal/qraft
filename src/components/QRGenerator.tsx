@@ -60,7 +60,6 @@ function buildQROptions(
     dotsOptions: { color: dotColor, type: 'dots' as const, roundSize: false } as any,
     backgroundOptions: { color: bgColor, round: 0 },
     ...(imageUrl ? {
-      // crossOrigin required so canvas isn't tainted → downloads work
       imageOptions: { crossOrigin: 'anonymous', margin: 6, imageSize: 0.3, hideBackgroundDots: true },
     } : {}),
     cornersSquareOptions: { type: 'extra-rounded' as const, color: dotColor },
@@ -84,9 +83,7 @@ export default function QRGenerator() {
   const qrContainerRef = useRef<HTMLDivElement>(null);
   const qrInstanceRef = useRef<any>(null);
   const colorUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // CORS-safe image URL for the QR center / artistic logo zone
   const faviconBlobRef = useRef<string | null>(null);
-  // Artistic mode: stores the generated canvas for download
   const artCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   /* render / re-render QR */
@@ -128,8 +125,6 @@ export default function QRGenerator() {
 
     const domain = extractDomain(src);
     const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-    // wsrv.nl is a purpose-built image proxy that adds Access-Control-Allow-Origin: *
-    // It converts to PNG and resizes, making it safe for canvas color extraction.
     const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(googleFaviconUrl)}&output=png&w=64&h=64`;
 
     let dots = '#1c1712';
@@ -137,10 +132,9 @@ export default function QRGenerator() {
     let allColors: string[] = [dots, bg];
     let qrImageUrl: string | null = null;
 
-    /* attempt color extraction — non-fatal if it fails */
     try {
       const img = new Image();
-      img.crossOrigin = 'anonymous'; // wsrv.nl returns Access-Control-Allow-Origin: *
+      img.crossOrigin = 'anonymous';
       img.src = wsrvUrl;
       await new Promise<void>((res, rej) => {
         img.onload = () => res();
@@ -149,7 +143,6 @@ export default function QRGenerator() {
       });
 
       const { default: ColorThiefCtor } = await import('colorthief');
-      // colorthief types resolve to node entry; cast for browser usage
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ct = new (ColorThiefCtor as any)();
       const raw = ct.getPalette(img, 8, 1) as number[][];
@@ -162,7 +155,6 @@ export default function QRGenerator() {
         if (lum > lightestLum) { lightestLum = lum; lightestColor = hex; }
       }
       bg = lightestLum > 0.7 ? lightestColor : '#ffffff';
-
       const bgLum = getLuminance(bg);
 
       /* build usable palette: sort by contrast, filter low-contrast, dedupe, max 4 */
@@ -176,28 +168,25 @@ export default function QRGenerator() {
         if (usable.some(f => Math.abs(getLuminance(f) - getLuminance(hex)) < 0.08)) continue;
         usable.push(hex);
       }
-      /* guarantee at least 2 options even if nothing clears threshold */
       for (const hex of byContrast) {
         if (usable.length >= 2) break;
         if (!usable.includes(hex)) usable.push(hex);
       }
 
       allColors = usable;
-      dots = usable[0]; // highest contrast — always consistent with first swatch
+      dots = usable[0];
 
-      /* safety: if even the best color barely contrasts, flip bg */
       if (Math.abs(getLuminance(dots) - bgLum) < 0.15) {
         bg = getLuminance(dots) < 0.5 ? '#ffffff' : '#1c1712';
       }
 
-      // wsrv.nl CORS allows canvas embedding without tainting → downloads work
       qrImageUrl = wsrvUrl;
     } catch {
-      /* color extraction failed — generate QR without image, use defaults */
+      /* color extraction failed — use defaults */
     }
 
     faviconBlobRef.current = qrImageUrl;
-    setFavicon(wsrvUrl); // display-only badge (no crossOrigin needed for <img>)
+    setFavicon(wsrvUrl);
     setDotColor(dots);
     setBgColor(bg);
     setPalette({ dominant: dots, background: bg, all: allColors });
@@ -206,13 +195,13 @@ export default function QRGenerator() {
     setStatus('done');
   }, [sourceUrl, qrContent, renderQR, qrMode]);
 
-  /* re-render when colors or mode change (only after initial generation) */
+  /* re-render when colors or mode change */
   useEffect(() => {
     if (status !== 'done') return;
     if (colorUpdateTimer.current) clearTimeout(colorUpdateTimer.current);
     colorUpdateTimer.current = setTimeout(() => {
       renderQR(normalizeUrl(qrContent), faviconBlobRef.current, dotColor, bgColor, qrMode);
-    }, qrMode === 'artistic' ? 0 : 300); // artistic re-render immediately on mode switch
+    }, qrMode === 'artistic' ? 0 : 300);
     return () => {
       if (colorUpdateTimer.current) clearTimeout(colorUpdateTimer.current);
     };
@@ -249,7 +238,6 @@ export default function QRGenerator() {
         return;
       }
 
-      // Center-mode downloads
       if (fmt === 'png' && qrInstanceRef.current) {
         await qrInstanceRef.current.download({ name: 'qraft-qr', extension: 'png' });
         return;
@@ -284,41 +272,51 @@ export default function QRGenerator() {
   /* ─── render ─────────────────────────────────────────── */
   return (
     <div className="min-h-screen flex flex-col">
+
       {/* ── nav ── */}
-      <header className="sticky top-0 z-10 px-6 py-4 flex items-center justify-between border-b border-ink-200 bg-ink-50/90 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-caoba flex items-center justify-center">
-            <QrCode className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-display text-xl font-semibold text-ink-900 italic">qraft</span>
-        </div>
-        <span className="hidden sm:block text-xs font-mono text-ink-400 tracking-wide">
-          brand-aware QR generator
+      <header className="sticky top-0 z-10 px-8 py-4 flex items-center justify-between border-b border-ink-200 bg-ink-50/90 backdrop-blur-sm">
+        <span className="font-display text-2xl font-semibold italic text-ink-900 tracking-tight">
+          qraft
+        </span>
+        <span className="hidden sm:block text-[11px] font-mono text-ink-400 tracking-widest uppercase">
+          generador de QR con identidad de marca
         </span>
       </header>
 
+      {/* ── wrapper vertical centering ── */}
+      <div className="flex-1 flex flex-col justify-center gap-10 py-10">
+
       {/* ── hero ── */}
-      <section className="px-6 pt-16 pb-12 text-center">
-        <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-light italic leading-none tracking-tight text-ink-900 mb-4">
-          QR codes that{' '}
-          <span className="text-gradient-caoba not-italic font-semibold">wear your brand</span>
+      <section
+        className={`px-6 text-center overflow-hidden hero-section${status === 'done' ? ' hero-section-shifted' : ''}`}
+      >
+        <h1 className="font-display italic leading-[0.88] tracking-tight select-none">
+          <span
+            className="block text-5xl sm:text-7xl lg:text-8xl font-light text-stroke animate-fade-up"
+            style={{ animationDelay: '0ms' }}
+          >
+            Códigos QR
+          </span>
+          <span
+            className="block text-5xl sm:text-7xl lg:text-8xl font-semibold text-ink-900 animate-fade-up"
+            style={{ animationDelay: '80ms' }}
+          >
+            con tu marca.
+          </span>
         </h1>
-        <p className="text-ink-600 font-sans text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-          Drop any URL — we extract its colors and favicon to craft a QR code
-          that feels native to the brand. No backend. No account.
-        </p>
       </section>
 
       {/* ── main content ── */}
-      <main className="flex-1 px-4 sm:px-6 pb-16 max-w-6xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start">
+      <div className="px-4 sm:px-6 max-w-[900px] mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-stretch">
+
           {/* ── left panel ── */}
-          <div className="bg-white border border-ink-200 rounded-2xl p-6 space-y-6 shadow-sm">
+          <div className="bg-white border border-ink-200 rounded-2xl p-6 flex flex-col gap-6 shadow-sm h-full">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* source url */}
+
               <div>
                 <label className="label" htmlFor="source-url">
-                  Website URL <span className="text-ink-400 normal-case tracking-normal">(for colors &amp; favicon)</span>
+                  URL del sitio web <span className="text-ink-400 normal-case tracking-normal">(para colores y favicon)</span>
                 </label>
                 <div className="relative">
                   <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
@@ -335,10 +333,9 @@ export default function QRGenerator() {
                 </div>
               </div>
 
-              {/* qr content */}
               <div>
                 <label className="label" htmlFor="qr-content">
-                  QR Content <span className="text-ink-400 normal-case tracking-normal">(URL or text)</span>
+                  Contenido del QR <span className="text-ink-400 normal-case tracking-normal">(URL o texto)</span>
                 </label>
                 <div className="relative">
                   <ChevronRight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
@@ -347,7 +344,7 @@ export default function QRGenerator() {
                     type="text"
                     value={qrContent}
                     onChange={e => setQrContent(e.target.value)}
-                    placeholder="https://github.com/yourrepo"
+                    placeholder="https://github.com/turep"
                     className="input-field pl-10"
                     autoComplete="off"
                     spellCheck={false}
@@ -357,11 +354,11 @@ export default function QRGenerator() {
 
               {/* Mode selector */}
               <div>
-                <p className="label mb-2">Style</p>
+                <p className="label mb-2">Estilo</p>
                 <div className="grid grid-cols-2 gap-2">
                   {([
-                    { value: 'center', icon: <QrCode className="w-4 h-4" />, label: 'Favicon in center' },
-                    { value: 'artistic', icon: <Layers className="w-4 h-4" />, label: 'Favicon as dots' },
+                    { value: 'center', icon: <QrCode className="w-4 h-4" />, label: 'Favicon en el centro' },
+                    { value: 'artistic', icon: <Layers className="w-4 h-4" />, label: 'Favicon como puntos' },
                   ] as const).map(opt => (
                     <button
                       key={opt.value}
@@ -388,34 +385,39 @@ export default function QRGenerator() {
                 {status === 'loading' ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Extracting colors…
+                    Extrayendo colores…
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    Generate QR
+                    Generar QR
                   </>
                 )}
               </button>
             </form>
 
-            {/* error */}
             {status === 'error' && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 font-mono animate-fade-up">
                 {errorMsg}
               </div>
             )}
 
-            {/* ── palette & color overrides (shown after generation) ── */}
-            {status === 'done' && palette && (
-              <div className="animate-fade-up space-y-5">
+            {/* ── palette & controls — height animated via max-height transition ── */}
+            <div
+              style={{
+                maxHeight: status === 'done' && palette ? '900px' : '0',
+                opacity: status === 'done' && palette ? 1 : 0,
+                overflow: 'hidden',
+                transition: 'max-height 0.55s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease',
+              }}
+            >
+              <div className="space-y-5">
                 <div className="section-divider" />
 
-                {/* palette */}
                 <div>
-                  <p className="label mb-3">Extracted Palette</p>
-                  <div className="flex flex-wrap gap-2">
-                    {palette.all.map((color, i) => (
+                  <p className="label mb-3">Paleta extraída</p>
+                  <div className="flex flex-wrap gap-3">
+                    {palette?.all.map((color, i) => (
                       <button
                         key={i}
                         title={color}
@@ -426,14 +428,13 @@ export default function QRGenerator() {
                     ))}
                   </div>
                   <p className="mt-2 text-[10px] font-mono text-ink-400">
-                    Click a swatch to use as dot color
+                    Haz clic en un color para usarlo en los puntos
                   </p>
                 </div>
 
-                {/* color pickers */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label" htmlFor="dot-color">Dot Color</label>
+                    <label className="label" htmlFor="dot-color">Color puntos</label>
                     <div className="flex items-center gap-2">
                       <input
                         id="dot-color"
@@ -446,7 +447,7 @@ export default function QRGenerator() {
                     </div>
                   </div>
                   <div>
-                    <label className="label" htmlFor="bg-color">Background</label>
+                    <label className="label" htmlFor="bg-color">Fondo</label>
                     <div className="flex items-center gap-2">
                       <input
                         id="bg-color"
@@ -462,73 +463,54 @@ export default function QRGenerator() {
 
                 <div className="section-divider" />
 
-                {/* download + reset */}
                 <div className="space-y-3">
-                  <p className="label">Download</p>
+                  <p className="label">Descargar</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => download('png')}
-                      className="btn-secondary"
-                    >
+                    <button onClick={() => download('png')} className="btn-secondary">
                       <Download className="w-4 h-4" />
                       PNG
                     </button>
-                    <button
-                      onClick={() => download('svg')}
-                      className="btn-secondary"
-                    >
+                    <button onClick={() => download('svg')} className="btn-secondary">
                       <Download className="w-4 h-4" />
                       SVG
                     </button>
                   </div>
-
                   <button
                     onClick={reset}
                     className="w-full flex items-center justify-center gap-2 text-ink-400 hover:text-ink-700 text-sm font-mono transition-colors py-1"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    Start over
+                    Empezar de nuevo
                   </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* ── right: QR preview ── */}
-          <div className="flex flex-col items-center justify-center min-h-[500px] lg:sticky lg:top-8">
-
-            {/*
-              The ref div must ALWAYS be in the DOM — even when hidden — so
-              qrContainerRef.current is never null when renderQR() runs.
-              CSS `hidden` keeps the node in the DOM; it just sets display:none.
-            */}
-            <div className={status === 'done' ? 'relative animate-scale-in' : 'hidden'}>
-              {/* dynamic glow */}
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className={status === 'done' ? 'relative animate-scale-in w-full max-w-[380px]' : 'hidden'}>
               <div
                 className="qr-glow"
                 style={{
                   background: `radial-gradient(ellipse, ${dotColor} 0%, ${bgColor} 55%, transparent 80%)`,
-                  opacity: 0.08,
                 }}
               />
-              {/* favicon badge */}
               {favicon && (
                 <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-white border-2 border-ink-200 flex items-center justify-center overflow-hidden z-20 shadow-md">
                   <img src={favicon} alt="favicon" className="w-6 h-6 object-contain" />
                 </div>
               )}
-              {/* QR canvas — ref is valid even when parent is display:none */}
               <div
                 ref={qrContainerRef}
-                className="relative z-10 rounded-2xl overflow-hidden shadow-lg ring-1 ring-ink-200"
+                className="qr-canvas-wrapper relative z-10 rounded-2xl overflow-hidden shadow-lg ring-1 ring-ink-200"
               />
             </div>
 
-            {/* placeholder — only visible when QR isn't ready */}
+            {/* placeholder */}
             {status !== 'done' && (
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div className="relative w-[380px] h-[380px] rounded-2xl border border-dashed border-ink-300 flex items-center justify-center bg-white/50">
-                  <div className="absolute inset-0 rounded-2xl overflow-hidden opacity-30">
+              <div className="relative w-full max-w-[380px] aspect-square rounded-2xl border border-dashed border-ink-300 flex items-center justify-center bg-white/50">
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden opacity-25">
                     <svg width="100%" height="100%">
                       <defs>
                         <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -544,9 +526,9 @@ export default function QRGenerator() {
                         <div className="w-16 h-16 rounded-2xl bg-ink-100 border border-ink-200 flex items-center justify-center">
                           <Loader2 className="w-7 h-7 text-caoba animate-spin" />
                         </div>
-                        <div className="space-y-1 text-center">
-                          <p className="text-ink-700 font-sans text-sm font-medium">Fetching favicon…</p>
-                          <p className="text-ink-400 font-mono text-xs">extracting color palette</p>
+                        <div className="space-y-1">
+                          <p className="text-ink-700 font-sans text-sm font-medium">Obteniendo favicon…</p>
+                          <p className="text-ink-400 font-mono text-xs">extrayendo paleta de colores</p>
                         </div>
                       </>
                     ) : (
@@ -554,34 +536,49 @@ export default function QRGenerator() {
                         <div className="w-16 h-16 rounded-2xl bg-ink-100 border border-ink-200 flex items-center justify-center">
                           <QrCode className="w-7 h-7 text-ink-400" />
                         </div>
-                        <div className="space-y-1 text-center">
-                          <p className="text-ink-600 font-sans text-sm">Your QR will appear here</p>
-                          <p className="text-ink-400 font-mono text-xs">enter a URL and generate</p>
+                        <div className="space-y-1">
+                          <p className="text-ink-600 font-sans text-sm">Tu QR aparecerá aquí</p>
+                          <p className="text-ink-400 font-mono text-xs">introduce una URL y genera</p>
                         </div>
                       </>
                     )}
                   </div>
                 </div>
-                {status === 'idle' && (
-                  <div className="flex items-center gap-6 mt-2">
-                    {[['01', 'Enter URL'], ['02', 'Extract colors'], ['03', 'Download QR']].map(([n, label]) => (
-                      <div key={n} className="flex items-center gap-2 text-ink-500">
-                        <span className="font-mono text-[10px] text-caoba">{n}</span>
-                        <span className="font-sans text-xs">{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             )}
           </div>
         </div>
-      </main>
+
+        {/* step indicators — outside grid so no height contribution */}
+        {status === 'idle' && (
+          <div className="flex items-center justify-center gap-8 mt-6">
+            {[['01', 'Introduce URL'], ['02', 'Extrae colores'], ['03', 'Descarga el QR']].map(([n, label]) => (
+              <div key={n} className="flex items-center gap-2 text-ink-500">
+                <span className="font-mono text-[10px] text-caoba">{n}</span>
+                <span className="font-sans text-xs">{label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      </div>{/* end vertical centering wrapper */}
 
       {/* ── footer ── */}
-      <footer className="border-t border-ink-200 px-6 py-4 flex items-center justify-between text-ink-400 text-xs font-mono">
-        <span>qraft</span>
-        <span>100% client-side · no data stored</span>
+      <footer className="border-t border-ink-200 px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="font-display italic font-semibold text-ink-900 tracking-tight">qraft</span>
+          <span className="text-ink-300">·</span>
+          <span className="text-[11px] font-mono text-ink-400">100% en cliente · sin almacenamiento de datos</span>
+        </div>
+        <a
+          href="https://lostal.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex items-center gap-1 text-[11px] font-mono text-ink-500 hover:text-caoba transition-colors duration-150"
+        >
+          Hecho por Álvaro Lostal
+          <span className="inline-block group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-150">↗</span>
+        </a>
       </footer>
     </div>
   );
