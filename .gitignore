@@ -1,0 +1,23 @@
+# Dependencias
+node_modules/
+pnpm-lock.yaml
+
+# Compilación y salida
+dist/
+build/
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
