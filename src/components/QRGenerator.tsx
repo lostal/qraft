@@ -152,21 +152,40 @@ export default function QRGenerator() {
       // colorthief types resolve to node entry; cast for browser usage
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ct = new (ColorThiefCtor as any)();
-      const raw = ct.getPalette(img, 6, 1) as number[][];
-      allColors = raw.map(rgbToHex);
-      dots = allColors[0];
+      const raw = ct.getPalette(img, 8, 1) as number[][];
+      const extracted = raw.map(rgbToHex);
 
-      /* choose background: lightest palette color that contrasts with dots */
-      let lightestLum = -1;
-      let lightestColor = '#f8f8f8';
-      for (const hex of allColors) {
+      /* background: only use palette color if genuinely light */
+      let lightestLum = -1, lightestColor = '#f8f8f8';
+      for (const hex of extracted) {
         const lum = getLuminance(hex);
         if (lum > lightestLum) { lightestLum = lum; lightestColor = hex; }
       }
-      bg = lightestLum > 0.35 ? lightestColor : '#f8f8f8';
+      bg = lightestLum > 0.7 ? lightestColor : '#f8f8f8';
+      const bgLum = getLuminance(bg);
 
-      // Guarantee readable contrast
-      if (Math.abs(getLuminance(dots) - getLuminance(bg)) < 0.25) {
+      /* build usable palette: sort by contrast, filter low-contrast, dedupe, max 4 */
+      const byContrast = [...extracted].sort(
+        (a, b) => Math.abs(getLuminance(b) - bgLum) - Math.abs(getLuminance(a) - bgLum)
+      );
+      const usable: string[] = [];
+      for (const hex of byContrast) {
+        if (usable.length >= 4) break;
+        if (Math.abs(getLuminance(hex) - bgLum) < 0.25) continue;
+        if (usable.some(f => Math.abs(getLuminance(f) - getLuminance(hex)) < 0.08)) continue;
+        usable.push(hex);
+      }
+      /* guarantee at least 2 options even if nothing clears threshold */
+      for (const hex of byContrast) {
+        if (usable.length >= 2) break;
+        if (!usable.includes(hex)) usable.push(hex);
+      }
+
+      allColors = usable;
+      dots = usable[0]; // highest contrast — always consistent with first swatch
+
+      /* safety: if even the best color barely contrasts, flip bg */
+      if (Math.abs(getLuminance(dots) - bgLum) < 0.15) {
         bg = getLuminance(dots) < 0.5 ? '#f8f8f8' : '#111827';
       }
 
@@ -180,7 +199,7 @@ export default function QRGenerator() {
     setFavicon(wsrvUrl); // display-only badge (no crossOrigin needed for <img>)
     setDotColor(dots);
     setBgColor(bg);
-    setPalette({ dominant: dots, background: bg, all: allColors.slice(0, 6) });
+    setPalette({ dominant: dots, background: bg, all: allColors });
 
     await renderQR(normalizeUrl(content), qrImageUrl, dots, bg, qrMode);
     setStatus('done');
