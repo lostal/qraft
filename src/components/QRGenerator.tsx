@@ -72,13 +72,14 @@ function buildQROptions(
   bgColor: string,
   size = 380,
 ) {
+  const margin = Math.round(size * 0.025); // 2.5%, same as artistic mode
   return {
     width: size,
     height: size,
     type: "canvas" as const,
     data,
     ...(imageUrl ? { image: imageUrl } : {}),
-    margin: 10,
+    margin,
     qrOptions: { errorCorrectionLevel: "H" as const },
     dotsOptions: {
       color: dotColor,
@@ -363,6 +364,7 @@ export default function QRGenerator() {
           faviconBlobRef.current,
           dotColor,
           bgColor,
+          1024,
         ),
         type: "svg" as const,
       });
