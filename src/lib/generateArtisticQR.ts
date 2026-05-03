@@ -35,6 +35,14 @@ function inFinderArea(row: number, col: number, N: number): boolean {
   );
 }
 
+function inFormatInfo(row: number, col: number, N: number): boolean {
+  if (row === 8 && col <= 8) return true;
+  if (col === 8 && row <= 8) return true;
+  if (row === 8 && col >= N - 8) return true;
+  if (col === 8 && row >= N - 7) return true;
+  return false;
+}
+
 function buildAlignmentSet(N: number): Set<number> {
   const version = Math.round((N - 17) / 4);
   const pos = ALIGN_POS[version - 1] ?? [];
@@ -115,8 +123,8 @@ function shouldDraw(
     col >= logoOffset && col < logoOffset + logoSize;
 
   if (inLogo) {
-    // Alignment patterns are structural — never replace with bitmap
     if (alignmentSet.has(row * N + col)) return qr.isDark(row, col);
+    if (inFormatInfo(row, col, N)) return qr.isDark(row, col);
 
     const fRow = Math.min(
       Math.floor(((row - logoOffset) / logoSize) * BITMAP_RES),
