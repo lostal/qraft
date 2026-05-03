@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Download, Sparkles, Loader2, Link2, QrCode, RotateCcw, ChevronRight, Layers } from 'lucide-react';
 import { generateArtisticQR, generateArtisticQRSVG } from '../lib/generateArtisticQR';
+import AmbientGradient from './AmbientGradient';
 
 /* ─── helpers ─────────────────────────────────────────── */
 
@@ -294,15 +295,17 @@ export default function QRGenerator() {
 
   /* ─── render ─────────────────────────────────────────── */
   const showPalette = status === 'done' && !!palette;
+
   return (
     <div className="min-h-screen flex flex-col">
+      <AmbientGradient colors={palette?.all ?? null} />
 
       {/* ── nav ── */}
-      <header className="sticky top-0 z-10 px-8 py-4 flex items-center justify-between border-b border-ink-200 bg-ink-50/90 backdrop-blur-sm">
-        <span className="font-display text-2xl font-semibold italic text-ink-900 tracking-tight">
+      <header className="sticky top-0 z-10 px-8 py-6 flex items-center justify-between border-b border-ink-200">
+        <span className="font-display text-3xl font-semibold italic tracking-tight text-ink-900">
           qraft
         </span>
-        <span className="hidden sm:block text-[11px] font-mono text-ink-400 tracking-widest uppercase">
+        <span className="hidden sm:block text-[13px] font-mono tracking-widest uppercase text-ink-600">
           generador de QR con identidad de marca
         </span>
       </header>
@@ -594,17 +597,17 @@ export default function QRGenerator() {
       </main>{/* end vertical centering wrapper */}
 
       {/* ── footer ── */}
-      <footer className="border-t border-ink-200 px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="border-t border-ink-200 px-8 py-7 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="font-display italic font-semibold text-ink-900 tracking-tight">qraft</span>
-          <span className="text-ink-300">·</span>
-          <span className="text-[11px] font-mono text-ink-400">100% en cliente · sin almacenamiento · favicon vía Google y wsrv.nl</span>
+          <span className="font-display text-lg italic font-semibold tracking-tight text-ink-900">qraft</span>
+          <span className="text-ink-500">·</span>
+          <span className="text-[13px] font-mono text-ink-600">100% en cliente · sin almacenamiento · favicon vía Google y wsrv.nl</span>
         </div>
         <a
           href="https://lostal.dev"
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex items-center gap-1 text-[11px] font-mono text-ink-500 hover:text-caoba transition-colors duration-150"
+          className="group flex items-center gap-1 text-[13px] font-mono text-ink-600 hover:text-caoba transition-colors duration-150"
         >
           Hecho por Álvaro Lostal
           <span className="inline-block group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-150">↗</span>

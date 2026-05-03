@@ -116,7 +116,7 @@
 
   @media (min-width: 1024px) {
     .hero-section-shifted {
-      transform: translateY(-28px);
+      transform: translateY(-18px);
     }
   }
 
