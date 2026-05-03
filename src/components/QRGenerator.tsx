@@ -88,12 +88,14 @@ export default function QRGenerator() {
   const [dotColor, setDotColor] = useState('#1c1712');
   const [bgColor, setBgColor] = useState('#ffffff');
   const [qrMode, setQrMode] = useState<QRMode>('center');
+  const [scrolled, setScrolled] = useState(false);
 
   const qrContainerRef = useRef<HTMLDivElement>(null);
   const qrInstanceRef = useRef<any>(null);
   const colorUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const faviconBlobRef = useRef<string | null>(null);
   const artCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   /* render / re-render QR */
   const renderQR = useCallback(
@@ -214,6 +216,18 @@ export default function QRGenerator() {
     }
   }, [sourceUrl, qrContent, renderQR, qrMode]);
 
+  /* scroll-aware navbar via IntersectionObserver */
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   /* re-render when colors or mode change */
   useEffect(() => {
     if (status !== 'done') return;
@@ -233,8 +247,16 @@ export default function QRGenerator() {
       if (!qrContent) return;
 
       if (qrMode === 'artistic') {
-        if (fmt === 'png' && artCanvasRef.current) {
-          artCanvasRef.current.toBlob(blob => {
+        if (fmt === 'png') {
+          // Regenerate at 1024px — the preview canvas is only 380px
+          const hiRes = await generateArtisticQR({
+            text: maybeNormalizeUrl(qrContent),
+            faviconUrl: faviconBlobRef.current,
+            dotColor,
+            bgColor,
+            canvasSize: 1024,
+          });
+          hiRes.toBlob(blob => {
             if (!blob) return;
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -262,8 +284,11 @@ export default function QRGenerator() {
         return;
       }
 
-      if (fmt === 'png' && qrInstanceRef.current) {
-        await qrInstanceRef.current.download({ name: 'qraft-qr', extension: 'png' });
+      if (fmt === 'png') {
+        // Regenerate at 1024px — the preview instance is only 380px
+        const { default: QRCodeStyling } = await import('qr-code-styling');
+        const hiRes = new QRCodeStyling(buildQROptions(maybeNormalizeUrl(qrContent), faviconBlobRef.current, dotColor, bgColor, 1024));
+        await hiRes.download({ name: 'qraft-qr', extension: 'png' });
         return;
       }
       const { default: QRCodeStyling } = await import('qr-code-styling');
@@ -298,10 +323,20 @@ export default function QRGenerator() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* sentinel: 1px invisible — cuando sale del viewport → navbar se vuelve sólida */}
+      <div ref={sentinelRef} className="absolute top-0 h-px w-full pointer-events-none" aria-hidden="true" />
+
       <AmbientGradient colors={palette?.all ?? null} />
 
       {/* ── nav ── */}
-      <header className="sticky top-0 z-10 px-8 py-6 flex items-center justify-between border-b border-ink-200">
+      <header
+        className={`sticky top-0 z-10 px-8 pb-6 flex items-center justify-between border-b transition-colors duration-300 ${
+          scrolled
+            ? 'bg-white/80 backdrop-blur-md border-ink-200'
+            : 'bg-transparent border-transparent'
+        }`}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)' }}
+      >
         <span className="font-display text-3xl font-semibold italic tracking-tight text-ink-900">
           qraft
         </span>
@@ -334,7 +369,7 @@ export default function QRGenerator() {
       </section>
 
       {/* ── main content ── */}
-      <div className="px-4 sm:px-6 max-w-[900px] mx-auto w-full">
+      <div className="px-4 sm:px-6 max-w-[900px] mx-auto w-full overflow-x-clip">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-stretch">
 
           {/* ── left panel ── */}
@@ -607,7 +642,7 @@ export default function QRGenerator() {
           href="https://lostal.dev"
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex items-center gap-1 text-[13px] font-mono text-ink-600 hover:text-caoba transition-colors duration-150"
+          className="group flex items-center gap-1 text-[13px] font-mono text-ink-600 hover:text-[#d3bb3f] transition-colors duration-150"
         >
           Hecho por Álvaro Lostal
           <span className="inline-block group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-150">↗</span>
